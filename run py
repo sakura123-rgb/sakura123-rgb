@@ -1,3 +1,10 @@
 py mule_reencryptor.py old_key.key new_key.key input.yaml output.yaml
 
 java -cp secure-properties-tool-j17.jar com.mulesoft.tools.SecurePropertiesTool keygen
+
+
+# Generate and save private key
+java -cp secure-properties-tool-j17.jar com.mulesoft.tools.SecurePropertiesTool keygen | awk '/Private Key:/ {print $3}' | tr -d '"' > private.key
+
+# Generate and save public key (run again)
+java -cp secure-properties-tool-j17.jar com.mulesoft.tools.SecurePropertiesTool keygen | awk '/Public Key:/ {print $3}' | tr -d '"' > public.key
