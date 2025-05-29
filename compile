@@ -1,0 +1,2 @@
+java -cp .:snakeyaml.jar:secure-properties-tool-j17.jar MuleYamlReencryptor \
+  old_private.key new_public.key input.yaml output.yaml
