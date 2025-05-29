@@ -1,0 +1,3 @@
+py mule_reencryptor.py old_key.key new_key.key input.yaml output.yaml
+
+java -cp secure-properties-tool-j17.jar com.mulesoft.tools.SecurePropertiesTool keygen
