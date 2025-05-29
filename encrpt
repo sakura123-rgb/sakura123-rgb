@@ -1,0 +1,121 @@
+import org.yaml.snakeyaml.Yaml;
+import java.io.*;
+import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+
+public class MuleYamlReencryptor {
+    private static final Pattern ENCRYPTED_PATTERN = 
+        Pattern.compile("!\\[encrypted:(.*?)\\]");
+    
+    private final String oldPrivateKey;
+    private final String newPublicKey;
+    
+    public MuleYamlReencryptor(String oldPrivateKey, String newPublicKey) {
+        this.oldPrivateKey = oldPrivateKey;
+        this.newPublicKey = newPublicKey;
+    }
+    
+    public void reencryptFile(String inputPath, String outputPath) throws Exception {
+        Yaml yaml = new Yaml();
+        Map<String, Object> yamlData;
+        
+        // Read input file
+        try (InputStream in = new FileInputStream(inputPath)) {
+            yamlData = yaml.load(in);
+        }
+        
+        // Process the YAML data
+        processMap(yamlData);
+        
+        // Write output file
+        try (Writer out = new FileWriter(outputPath)) {
+            yaml.dump(yamlData, out);
+        }
+    }
+    
+    private void processMap(Map<String, Object> map) throws Exception {
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            if (entry.getValue() instanceof String) {
+                entry.setValue(processString((String) entry.getValue()));
+            } else if (entry.getValue() instanceof Map) {
+                processMap((Map<String, Object>) entry.getValue());
+            } else if (entry.getValue() instanceof Iterable) {
+                processList((Iterable<?>) entry.getValue());
+            }
+        }
+    }
+    
+    private void processList(Iterable<?> list) throws Exception {
+        for (Object item : list) {
+            if (item instanceof String) {
+                processString((String) item);
+            } else if (item instanceof Map) {
+                processMap((Map<String, Object>) item);
+            }
+        }
+    }
+    
+    private String processString(String value) throws Exception {
+        Matcher matcher = ENCRYPTED_PATTERN.matcher(value);
+        if (matcher.find()) {
+            String encryptedValue = matcher.group(1);
+            
+            // Decrypt with old key
+            String decrypted = decrypt(encryptedValue, oldPrivateKey);
+            
+            // Encrypt with new key
+            String reencrypted = encrypt(decrypted, newPublicKey);
+            
+            return "![encrypted:" + reencrypted + "]";
+        }
+        return value;
+    }
+    
+    private String decrypt(String encryptedValue, String key) throws Exception {
+        // Use your existing secure-properties-tool
+        Process process = Runtime.getRuntime().exec(
+            new String[] {
+                "java", "-cp", "secure-properties-tool-j17.jar", 
+                "com.mulesoft.tools.SecurePropertiesTool", 
+                "decrypt", key, encryptedValue
+            });
+        
+        return readProcessOutput(process);
+    }
+    
+    private String encrypt(String plaintext, String key) throws Exception {
+        // Use your existing secure-properties-tool
+        Process process = Runtime.getRuntime().exec(
+            new String[] {
+                "java", "-cp", "secure-properties-tool-j17.jar", 
+                "com.mulesoft.tools.SecurePropertiesTool", 
+                "encrypt", key, plaintext
+            });
+        
+        return readProcessOutput(process);
+    }
+    
+    private String readProcessOutput(Process process) throws Exception {
+        BufferedReader reader = new BufferedReader(
+            new InputStreamReader(process.getInputStream()));
+        String line = reader.readLine();
+        process.waitFor();
+        if (process.exitValue() != 0) {
+            throw new RuntimeException("Process failed");
+        }
+        return line;
+    }
+    
+    public static void main(String[] args) throws Exception {
+        if (args.length != 4) {
+            System.out.println("Usage: java MuleYamlReencryptor " +
+                "<old-private-key> <new-public-key> <input.yaml> <output.yaml>");
+            System.exit(1);
+        }
+        
+        MuleYamlReencryptor reencryptor = new MuleYamlReencryptor(
+            args[0], args[1]);
+        reencryptor.reencryptFile(args[2], args[3]);
+    }
+}
