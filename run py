@@ -10,7 +10,4 @@ java -cp secure-properties-tool-j17.jar com.mulesoft.tools.SecurePropertiesTool 
 java -cp secure-properties-tool-j17.jar com.mulesoft.tools.SecurePropertiesTool keygen | awk '/Public Key:/ {print $3}' | tr -d '"' > public.key
 
 
-java -cp secure-properties-tool.jar com.mulesoft.tools.SecurePropertiesTool \
-  keygen --algorithm RSA --key-size 2048 \
-  --output-private-key private.key \
-  --output-public-key public.key
+java -cp secure-properties-tool-j17.jar com.mulesoft.tools.SecurePropertiesTool keygen --algorithm AES --key-size 256
