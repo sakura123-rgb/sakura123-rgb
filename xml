@@ -1,0 +1,29 @@
+<flow name="incrementalCounterFlow">
+    <scheduler doc:name="Scheduler">
+        <scheduling-strategy>
+            <fixed-frequency frequency="1" timeUnit="MINUTES"/>
+        </scheduling-strategy>
+    </scheduler>
+    
+    <choice doc:name="Check if should continue">
+        <when expression="#[vars.currentValue != null and vars.currentValue &gt;= 1000]">
+            <logger level="INFO" message="Reached target value of 1000, stopping scheduler"/>
+            <scheduler-control operation="stopScheduler" schedulerName="incrementalCounterFlow#0"/>
+        </when>
+        <otherwise>
+            <try doc:name="Try">
+                <object-store:retrieve doc:name="Retrieve current value" key="counterValue" target="currentValue"/>
+                <choice doc:name="Initialize or increment">
+                    <when expression="#[vars.currentValue == null]">
+                        <set-variable value="10" doc:name="Initialize to 10" variableName="currentValue"/>
+                    </when>
+                    <otherwise>
+                        <set-variable value="#[vars.currentValue + 10]" doc:name="Increment by 10" variableName="currentValue"/>
+                    </otherwise>
+                </choice>
+                <object-store:store doc:name="Store new value" key="counterValue" value="#[vars.currentValue]"/>
+                <logger level="INFO" message="Current counter value: #[vars.currentValue]"/>
+            </try>
+        </otherwise>
+    </choice>
+</flow>
