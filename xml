@@ -1,29 +1,39 @@
-<flow name="incrementalCounterFlow">
-    <scheduler doc:name="Scheduler">
-        <scheduling-strategy>
-            <fixed-frequency frequency="1" timeUnit="MINUTES"/>
-        </scheduling-strategy>
-    </scheduler>
-    
-    <choice doc:name="Check if should continue">
-        <when expression="#[vars.currentValue != null and vars.currentValue &gt;= 1000]">
-            <logger level="INFO" message="Reached target value of 1000, stopping scheduler"/>
-            <scheduler-control operation="stopScheduler" schedulerName="incrementalCounterFlow#0"/>
-        </when>
-        <otherwise>
-            <try doc:name="Try">
-                <object-store:retrieve doc:name="Retrieve current value" key="counterValue" target="currentValue"/>
-                <choice doc:name="Initialize or increment">
-                    <when expression="#[vars.currentValue == null]">
-                        <set-variable value="10" doc:name="Initialize to 10" variableName="currentValue"/>
-                    </when>
-                    <otherwise>
-                        <set-variable value="#[vars.currentValue + 10]" doc:name="Increment by 10" variableName="currentValue"/>
-                    </otherwise>
-                </choice>
-                <object-store:store doc:name="Store new value" key="counterValue" value="#[vars.currentValue]"/>
-                <logger level="INFO" message="Current counter value: #[vars.currentValue]"/>
-            </try>
-        </otherwise>
-    </choice>
-</flow>
+ <flow name="increment-object-store-flow">
+
+        <!-- Scheduler: Runs every 1 minute -->
+        <scheduler:scheduled frequency="1" timeUnit="MINUTES" doc:name="Scheduler" />
+
+        <!-- Retrieve value from Object Store or use default of 0 -->
+        <object-store:retrieve doc:name="Retrieve Counter"
+                               config-ref="objectStoreConfig"
+                               key="counter"
+                               defaultValue="0"
+                               target="counterValue" />
+
+        <!-- Check if value >= 1000 -->
+        <choice doc:name="Check If Limit Reached">
+            <when expression="#[vars.counterValue >= 1000]">
+                <logger level="INFO" doc:name="Skip Increment"
+                        message="Counter has reached or exceeded 1000. Skipping increment." />
+                <return />
+            </when>
+        </choice>
+
+        <!-- Increment the counter by 10 -->
+        <expression-component doc:name="Increment Counter">
+            <![CDATA[
+                vars.newValue = vars.counterValue + 10;
+            ]]>
+        </expression-component>
+
+        <!-- Store updated value in Object Store -->
+        <object-store:store doc:name="Store New Value"
+                            config-ref="objectStoreConfig"
+                            key="counter"
+                            value="#[vars.newValue]" />
+
+        <!-- Log new value -->
+        <logger level="INFO" doc:name="Log New Value"
+                message="New counter value stored: #[vars.newValue]" />
+
+    </flow>
