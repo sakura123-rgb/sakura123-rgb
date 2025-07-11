@@ -1,10 +1,11 @@
-String objectName = 'Account';
+String objectName = 'Account'; // Change to any object name
 Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
 Schema.SObjectType objType = gd.get(objectName);
 Schema.DescribeSObjectResult objDescribe = objType.getDescribe();
 
 Map<String, Schema.SObjectField> fieldsMap = objDescribe.fields.getMap();
 
-for (String fieldName : fieldsMap.keySet()) {
-    System.debug('Field: ' + fieldName);
-}
+List<String> fieldNames = new List<String>(fieldsMap.keySet());
+fieldNames.sort(); // Optional: sort alphabetically
+
+System.debug('All Fields: ' + String.join(fieldNames, ', '));
